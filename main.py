@@ -6,8 +6,8 @@ from flask import Flask
 import os
 
 # --- Налаштування ---
-BOT_TOKEN = '8123961931:AAF_NrjyHnEqwb4FzTywORBWwyi2FKp_MRs'  # Замінити на свій токен
-CHANNEL = '@b_shelter'  # Канал або чат
+BOT_TOKEN = '8123961931:AAF_NrjyHnEqwb4FzTywORBWwyi2FKp_MRs'
+CHANNEL = '@b_shelter'
 
 ALERT_STICKER = 'CAACAgIAAxkBAAEOrudoSZ8PeLC5ug8n6Zss5a_cdHwvwwACrXEAAtMcQUqVXKBdnTw7aDYE'
 CLEAR_STICKER = 'CAACAgIAAxkBAAEOruloSZ8x1sfzXi5mwJVfAvhSAAGh_z0AAqdlAAIGPkBKRnqQyR78Ajg2BA'
@@ -26,6 +26,7 @@ def home():
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
+    print(f"[Flask] Сервер запущено на порті {port}")
     app.run(host='0.0.0.0', port=port)
 
 # --- Перевірка тривоги ---
@@ -47,20 +48,25 @@ def bot_loop():
     last_alert = None
 
     while True:
-        print(">>> tick ...")
         try:
+            print(">>> Перевірка API ...")
             r = requests.get(API_URL, headers=headers, timeout=5)
             r.raise_for_status()
             data = r.json()
             is_alert_now = check_alert(data)
             print(f">>> Тривога зараз: {is_alert_now}")
 
-            if is_alert_now and last_alert is not True:
+            if last_alert is None:
+                last_alert = is_alert_now  # ініціалізація після першої перевірки
+                print(f">>> Початковий стан збережено: {last_alert}")
+                continue
+
+            if is_alert_now and not last_alert:
                 print("⚠️ Нова тривога! Відправляємо стікер.")
                 bot.send_sticker(CHANNEL, ALERT_STICKER)
                 last_alert = True
 
-            elif not is_alert_now and last_alert is not False:
+            elif not is_alert_now and last_alert:
                 print("✅ Відбій тривоги! Відправляємо стікер.")
                 bot.send_sticker(CHANNEL, CLEAR_STICKER)
                 last_alert = False
@@ -68,7 +74,7 @@ def bot_loop():
         except Exception as e:
             print(f"❌ Помилка у перевірці: {e}")
 
-        time.sleep(5)
+        time.sleep(15)
 
 # --- Запуск ---
 if __name__ == '__main__':
