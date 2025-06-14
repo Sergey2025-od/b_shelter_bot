@@ -26,7 +26,8 @@ def home():
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+    # debug=False, use_reloader=False чтобы не запускался лишний поток
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 # --- Перевірка тривоги ---
 def check_alert(data):
@@ -78,7 +79,7 @@ def bot_loop():
 
 # --- Запуск ---
 if __name__ == '__main__':
-    # Flask запускається в окремому потоці
+    # Запускаем Flask в отдельном потоке
     threading.Thread(target=run_flask).start()
-    # Основний цикл перевірки
+    # Запускаем проверку тревог в основном потоке
     bot_loop()
