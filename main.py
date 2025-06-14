@@ -5,19 +5,17 @@ import telebot
 from flask import Flask
 import os
 
-# --- Налаштування ---
-BOT_TOKEN = '8123961931:AAF_NrjyHnEqwb4FzTywORBWwyi2FKp_MRs'  # Замінити на свій токен
-CHANNEL = '@b_shelter'  # Канал або чат
+# === Налаштування ===
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHANNEL = os.getenv("CHANNEL")  # наприклад: '@b_shelter'
+
+API_TOKEN = os.getenv("API_TOKEN")
+API_URL = 'https://api.alerts.in.ua/v1/alerts/active.json'
 
 ALERT_STICKER = 'CAACAgIAAxkBAAEOrudoSZ8PeLC5ug8n6Zss5a_cdHwvwwACrXEAAtMcQUqVXKBdnTw7aDYE'
 CLEAR_STICKER = 'CAACAgIAAxkBAAEOruloSZ8x1sfzXi5mwJVfAvhSAAGh_z0AAqdlAAIGPkBKRnqQyR78Ajg2BA'
 
-API_URL = 'https://api.alerts.in.ua/v1/alerts/active.json'
-API_TOKEN = '43f24461d276238f96128d073eb1562692e230a1ab2203'
-
 bot = telebot.TeleBot(BOT_TOKEN)
-
-# --- Flask сервер ---
 app = Flask(__name__)
 
 @app.route('/')
@@ -26,10 +24,8 @@ def home():
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
-    print(f">>> Запуск Flask на порту {port}")
     app.run(host='0.0.0.0', port=port)
 
-# --- Перевірка тривоги ---
 def check_alert(data):
     alerts = data.get('alerts', [])
     for alert in alerts:
@@ -39,55 +35,39 @@ def check_alert(data):
     return False
 
 def bot_loop():
-    print(">>> Запуск циклу перевірки тривог")
+    print(">>> bot_loop стартує")
     headers = {
         'Authorization': f'Bearer {API_TOKEN}',
-        'User-Agent': 'Mozilla/5.0',
+        'User-Agent': 'Mozilla/5.0'
     }
 
-    try:
-        print(">>> Початкова перевірка API ...")
-        r = requests.get(API_URL, headers=headers, timeout=5)
-        print(f"--- HTTP статус: {r.status_code}")
-        print(f"--- Відповідь API (перші 300 символів): {r.text[:300]}...")
-        r.raise_for_status()
-        data = r.json()
-        last_alert = check_alert(data)
-        print(f">>> Початковий стан тривоги: {last_alert}")
-    except Exception as e:
-        print(f"❌ Помилка при стартовій перевірці: {e}")
-        last_alert = False
-
-    print(">>> Старт основного циклу")
+    last_alert = None
 
     while True:
         print(">>> tick ...")
         try:
-            r = requests.get(API_URL, headers=headers, timeout=5)
+            r = requests.get(API_URL, headers=headers, timeout=10)
             r.raise_for_status()
             data = r.json()
             is_alert_now = check_alert(data)
             print(f">>> Тривога зараз: {is_alert_now}")
 
             if is_alert_now and last_alert is not True:
-                print("⚠️ Нова тривога! Відправляємо стікер.")
+                print("⚠️ ТРИВОГА! Відправляємо стікер.")
                 bot.send_sticker(CHANNEL, ALERT_STICKER)
                 last_alert = True
 
             elif not is_alert_now and last_alert is not False:
-                print("✅ Відбій тривоги! Відправляємо стікер.")
+                print("✅ ВІДБІЙ! Відправляємо стікер.")
                 bot.send_sticker(CHANNEL, CLEAR_STICKER)
                 last_alert = False
 
         except Exception as e:
-            print(f"❌ Помилка у перевірці: {e}")
+            print(f"❌ Помилка: {e}")
 
-        time.sleep(15)
+        time.sleep(5)
 
-# --- Запуск ---
 if __name__ == '__main__':
     print("=== Старт основного процесу ===")
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True  # щоб Flask не блокував завершення програми
-    flask_thread.start()
+    threading.Thread(target=run_flask, daemon=True).start()
     bot_loop()
