@@ -72,7 +72,7 @@ def bot_loop():
         except Exception as e:
             print(f"❌ Помилка у перевірці: {e}")
 
-        time.sleep(10)
+        time.sleep(15)
 
 # --- Запуск ---
 if __name__ == '__main__':
