@@ -1,3 +1,9 @@
+if __name__ == '__main__':
+    print("=== Старт основного процесса ===")
+    threading.Thread(target=run_flask).start()
+    print("=== Flask запущен, запускаем цикл проверки ===")
+    bot_loop()
+
 import time
 import threading
 import requests
