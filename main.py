@@ -25,7 +25,7 @@ def home():
     return 'Бот працює ✅'
 
 def run_flask():
-    port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
 
 # --- Перевірка тривоги ---
