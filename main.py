@@ -26,7 +26,6 @@ def home():
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
-    print(f"[Flask] Сервер запущено на порті {port}")
     app.run(host='0.0.0.0', port=port)
 
 # --- Перевірка тривоги ---
@@ -45,7 +44,16 @@ def bot_loop():
         'User-Agent': 'Mozilla/5.0',
     }
 
-    last_alert = None
+    try:
+        print(">>> Початкова перевірка API ...")
+        r = requests.get(API_URL, headers=headers, timeout=5)
+        r.raise_for_status()
+        data = r.json()
+        last_alert = check_alert(data)
+        print(f">>> Початковий стан тривоги: {last_alert}")
+    except Exception as e:
+        print(f"❌ Помилка при стартовій перевірці: {e}")
+        last_alert = False
 
     while True:
         try:
@@ -56,11 +64,6 @@ def bot_loop():
             is_alert_now = check_alert(data)
             print(f">>> Тривога зараз: {is_alert_now}")
 
-            if last_alert is None:
-                last_alert = is_alert_now  # ініціалізація після першої перевірки
-                print(f">>> Початковий стан збережено: {last_alert}")
-                continue
-
             if is_alert_now and not last_alert:
                 print("⚠️ Нова тривога! Відправляємо стікер.")
                 bot.send_sticker(CHANNEL, ALERT_STICKER)
@@ -70,9 +73,11 @@ def bot_loop():
                 print("✅ Відбій тривоги! Відправляємо стікер.")
                 bot.send_sticker(CHANNEL, CLEAR_STICKER)
                 last_alert = False
+            else:
+                print("ℹ️ Стан не змінився. Нічого не надсилаємо.")
 
         except Exception as e:
-            print(f"❌ Помилка у перевірці: {e}")
+            print(f"❌ Помилка у циклі перевірки: {e}")
 
         time.sleep(15)
 
