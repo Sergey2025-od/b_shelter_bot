@@ -6,8 +6,8 @@ from flask import Flask
 import os
 
 # --- Налаштування ---
-BOT_TOKEN = '8123961931:AAF_NrjyHnEqwb4FzTywORBWwyi2FKp_MRs'  # заміни при потребі
-CHANNEL = '@b_shelter'  # канал або чат
+BOT_TOKEN = '8123961931:AAF_NrjyHnEqwb4FzTywORBWwyi2FKp_MRs'  # Замінити на свій токен
+CHANNEL = '@b_shelter'  # Канал або чат
 
 ALERT_STICKER = 'CAACAgIAAxkBAAEOrudoSZ8PeLC5ug8n6Zss5a_cdHwvwwACrXEAAtMcQUqVXKBdnTw7aDYE'
 CLEAR_STICKER = 'CAACAgIAAxkBAAEOruloSZ8x1sfzXi5mwJVfAvhSAAGh_z0AAqdlAAIGPkBKRnqQyR78Ajg2BA'
@@ -45,6 +45,7 @@ def bot_loop():
     }
 
     last_alert = None
+    first_check = True
 
     while True:
         print(">>> tick ...")
@@ -55,12 +56,15 @@ def bot_loop():
             is_alert_now = check_alert(data)
             print(f">>> Тривога зараз: {is_alert_now}")
 
-            if is_alert_now and last_alert is not True:
+            if first_check:
+                print("👀 Перша перевірка — нічого не відправляємо.")
+                last_alert = is_alert_now
+                first_check = False
+            elif is_alert_now and not last_alert:
                 print("⚠️ Нова тривога! Відправляємо стікер.")
                 bot.send_sticker(CHANNEL, ALERT_STICKER)
                 last_alert = True
-
-            elif not is_alert_now and last_alert is not False:
+            elif not is_alert_now and last_alert:
                 print("✅ Відбій тривоги! Відправляємо стікер.")
                 bot.send_sticker(CHANNEL, CLEAR_STICKER)
                 last_alert = False
@@ -68,7 +72,7 @@ def bot_loop():
         except Exception as e:
             print(f"❌ Помилка у перевірці: {e}")
 
-        time.sleep(10)  # затримка між перевірками
+        time.sleep(10)
 
 # --- Запуск ---
 if __name__ == '__main__':
