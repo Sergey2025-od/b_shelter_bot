@@ -26,6 +26,7 @@ def home():
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
+    print(f">>> Запуск Flask на порту {port}")
     app.run(host='0.0.0.0', port=port)
 
 # --- Перевірка тривоги ---
@@ -44,24 +45,21 @@ def bot_loop():
         'User-Agent': 'Mozilla/5.0',
     }
 
-    # --- Початкова перевірка API ---
     try:
         print(">>> Початкова перевірка API ...")
         r = requests.get(API_URL, headers=headers, timeout=5)
         print(f"--- HTTP статус: {r.status_code}")
-        print(f"--- Відповідь API: {r.text[:300]}...")  # Показуємо частину
+        print(f"--- Відповідь API (перші 300 символів): {r.text[:300]}...")
         r.raise_for_status()
         data = r.json()
         last_alert = check_alert(data)
         print(f">>> Початковий стан тривоги: {last_alert}")
-    except requests.exceptions.HTTPError as http_err:
-        print(f"❌ HTTP помилка: {http_err}")
-        last_alert = False
     except Exception as e:
-        print(f"❌ Інша помилка: {e}")
+        print(f"❌ Помилка при стартовій перевірці: {e}")
         last_alert = False
 
-    # --- Основний цикл ---
+    print(">>> Старт основного циклу")
+
     while True:
         print(">>> tick ...")
         try:
@@ -84,10 +82,12 @@ def bot_loop():
         except Exception as e:
             print(f"❌ Помилка у перевірці: {e}")
 
-        time.sleep(5)
+        time.sleep(15)
 
 # --- Запуск ---
 if __name__ == '__main__':
     print("=== Старт основного процесу ===")
-    threading.Thread(target=run_flask).start()
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True  # щоб Flask не блокував завершення програми
+    flask_thread.start()
     bot_loop()
