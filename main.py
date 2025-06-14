@@ -26,8 +26,7 @@ def home():
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
-    # debug=False, use_reloader=False чтобы не запускался лишний поток
-    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+    app.run(host='0.0.0.0', port=port)
 
 # --- Перевірка тривоги ---
 def check_alert(data):
@@ -39,37 +38,49 @@ def check_alert(data):
     return False
 
 def bot_loop():
+    print("Запуск циклу перевірки тривоги")
     headers = {
         'Authorization': f'Bearer {API_TOKEN}',
         'User-Agent': 'Mozilla/5.0',
     }
 
+    last_alert = False
+
+    # Початкова перевірка
     try:
         r = requests.get(API_URL, headers=headers, timeout=5)
+        print(f"HTTP статус початкової перевірки: {r.status_code}")
         r.raise_for_status()
         data = r.json()
+        print(f"Отримано {len(data.get('alerts', []))} тривог при старті")
         last_alert = check_alert(data)
         print(f"Стартове значення тривоги: {last_alert}")
     except Exception as e:
         print(f"Помилка при стартовій перевірці: {e}")
-        last_alert = False
 
     while True:
         try:
             r = requests.get(API_URL, headers=headers, timeout=5)
+            print(f"HTTP статус запиту: {r.status_code}")
             r.raise_for_status()
             data = r.json()
-            is_alert_now = check_alert(data)
-            print(f"Тривога зараз: {is_alert_now}")
+            alert_now = check_alert(data)
+            print(f"Тривога зараз: {alert_now}")
 
-            if is_alert_now and not last_alert:
+            if alert_now and not last_alert:
                 print("⚠️ Нова тривога! Відправляємо стікер.")
-                bot.send_sticker(CHANNEL, ALERT_STICKER)
+                try:
+                    bot.send_sticker(CHANNEL, ALERT_STICKER)
+                except Exception as e:
+                    print(f"Помилка при відправці стікера тривоги: {e}")
                 last_alert = True
 
-            elif not is_alert_now and last_alert:
+            elif not alert_now and last_alert:
                 print("✅ Відбій тривоги! Відправляємо стікер.")
-                bot.send_sticker(CHANNEL, CLEAR_STICKER)
+                try:
+                    bot.send_sticker(CHANNEL, CLEAR_STICKER)
+                except Exception as e:
+                    print(f"Помилка при відправці стікера відбою: {e}")
                 last_alert = False
 
         except Exception as e:
@@ -79,7 +90,7 @@ def bot_loop():
 
 # --- Запуск ---
 if __name__ == '__main__':
-    # Запускаем Flask в отдельном потоке
+    print("Запуск програми")
     threading.Thread(target=run_flask).start()
-    # Запускаем проверку тревог в основном потоке
+    print("Запуск bot_loop")
     bot_loop()
