@@ -6,8 +6,8 @@ from flask import Flask
 import os
 
 # --- Налаштування ---
-BOT_TOKEN = '8123961931:AAF_NrjyHnEqwb4FzTywORBWwyi2FKp_MRs'
-CHANNEL = '@b_shelter'
+BOT_TOKEN = '8123961931:AAF_NrjyHnEqwb4FzTywORBWwyi2FKp_MRs'  # Замінити на свій токен
+CHANNEL = '@b_shelter'  # Канал або чат
 
 ALERT_STICKER = 'CAACAgIAAxkBAAEOrudoSZ8PeLC5ug8n6Zss5a_cdHwvwwACrXEAAtMcQUqVXKBdnTw7aDYE'
 CLEAR_STICKER = 'CAACAgIAAxkBAAEOruloSZ8x1sfzXi5mwJVfAvhSAAGh_z0AAqdlAAIGPkBKRnqQyR78Ajg2BA'
@@ -44,42 +44,47 @@ def bot_loop():
         'User-Agent': 'Mozilla/5.0',
     }
 
+    # --- Початкова перевірка API ---
     try:
         print(">>> Початкова перевірка API ...")
         r = requests.get(API_URL, headers=headers, timeout=5)
+        print(f"--- HTTP статус: {r.status_code}")
+        print(f"--- Відповідь API: {r.text[:300]}...")  # Показуємо частину
         r.raise_for_status()
         data = r.json()
         last_alert = check_alert(data)
         print(f">>> Початковий стан тривоги: {last_alert}")
+    except requests.exceptions.HTTPError as http_err:
+        print(f"❌ HTTP помилка: {http_err}")
+        last_alert = False
     except Exception as e:
-        print(f"❌ Помилка при стартовій перевірці: {e}")
+        print(f"❌ Інша помилка: {e}")
         last_alert = False
 
+    # --- Основний цикл ---
     while True:
+        print(">>> tick ...")
         try:
-            print(">>> Перевірка API ...")
             r = requests.get(API_URL, headers=headers, timeout=5)
             r.raise_for_status()
             data = r.json()
             is_alert_now = check_alert(data)
             print(f">>> Тривога зараз: {is_alert_now}")
 
-            if is_alert_now and not last_alert:
+            if is_alert_now and last_alert is not True:
                 print("⚠️ Нова тривога! Відправляємо стікер.")
                 bot.send_sticker(CHANNEL, ALERT_STICKER)
                 last_alert = True
 
-            elif not is_alert_now and last_alert:
+            elif not is_alert_now and last_alert is not False:
                 print("✅ Відбій тривоги! Відправляємо стікер.")
                 bot.send_sticker(CHANNEL, CLEAR_STICKER)
                 last_alert = False
-            else:
-                print("ℹ️ Стан не змінився. Нічого не надсилаємо.")
 
         except Exception as e:
-            print(f"❌ Помилка у циклі перевірки: {e}")
+            print(f"❌ Помилка у перевірці: {e}")
 
-        time.sleep(15)
+        time.sleep(5)
 
 # --- Запуск ---
 if __name__ == '__main__':
